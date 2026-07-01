@@ -290,7 +290,6 @@
             <div class="editor-container" id="editorPanelContent" style="scroll-margin-top: 20px;">
                 <div class="editor-placeholder" style="margin-top:40px; margin-bottom:40px;">請選取中央的矩陣方格<br>解鎖改裝配置</div>
             </div>
-            <!-- 雷達圖區域 -->
             <div class="radar-container">
                 <div class="radar-title">核心六維潛能圖</div>
                 <canvas id="radarCanvas" width="300" height="260"></canvas>
@@ -361,7 +360,7 @@
         affixDictionary.push({ v: `對${a}目標魔法傷害時機率傷害`, t: `異常 狀態 魔法 機率 ${a}` });
     });
 
-    // 🌟 卡片資料庫 (提取自您的檔案 2)
+    // 🌟 卡片資料庫
     const allCards = ["魔鍋蛋", "瘋狂螳螂", "綠棉蟲", "禿鷹", "沙漠幼狼", "蒼蠅", "魔菇", "摩卡", "燃燒夢魘", "深海海神", "深海劍魚", "亞拉", "食人魚", "樹精", "堅硬石巨人"];
     const cardDictionary = allCards.map(c => ({ v: c, t: "卡片" }));
 
@@ -523,9 +522,8 @@
         }
     }
 
-    // 🚀 核心自建智慧下拉菜單邏輯
+    // 🚀 核心自建智慧下拉菜單邏輯 (附帶修復版輸入法中斷問題)
     window.openAC = function(inputEl, dict, type, affixIdx = null) {
-        // 先關閉其他展開的選單
         document.querySelectorAll('.ac-list').forEach(el => el.style.display = 'none');
         
         let wrap = inputEl.closest('.ac-wrap');
@@ -538,10 +536,10 @@
                 let qParts = q.split(' ');
                 matches = dict.filter(d => {
                     let searchStr = (d.v + " " + (d.t || "")).toLowerCase();
-                    return qParts.every(part => searchStr.includes(part)); // 支援多關鍵字搜尋 (例如: 異常 物理)
+                    return qParts.every(part => searchStr.includes(part));
                 });
             }
-            matches = matches.slice(0, 80); // 效能防護
+            matches = matches.slice(0, 80);
 
             if (matches.length > 0) {
                 list.innerHTML = matches.map(m => `
@@ -568,14 +566,21 @@
         };
     }
 
+    // 🌟 修改後的 selectAC：只更新數據與 Input，絕不摧毀 DOM，保證輸入法連貫！
     window.selectAC = function(type, val, affixIdx) {
         if (type === 'card') {
             updateHeaderData('card', val);
+            const input = document.querySelector('.editor-container .ac-wrap input[placeholder="鍵入卡片名稱..."]');
+            if (input) input.value = val;
         } else {
             updateAffixData(affixIdx, 'name', val);
+            const rows = document.querySelectorAll('.affix-slot-row');
+            if (rows[affixIdx]) {
+                const input = rows[affixIdx].querySelector('input');
+                if (input) input.value = val;
+            }
         }
-        // 強制重繪 Editor 以關閉並更新欄位
-        renderEditor();
+        document.querySelectorAll('.ac-list').forEach(el => el.style.display = 'none');
     }
 
     document.addEventListener('click', function(e) {
@@ -603,7 +608,6 @@
         let affixRows = '';
         for (let i = 0; i < 5; i++) {
             const af = slotData.affixes[i] || {name:'', val:''};
-            // 替換為客製化 AC 包裝
             affixRows += `
                 <div class="affix-slot-row">
                     <div class="ac-wrap" style="width:100%;">
@@ -652,7 +656,7 @@
         const curChar = globalAppState.characters[globalAppState.activeCharId];
         curChar.config[activeEquipName][activeSlotIndex].affixes[afIdx][key] = val;
         syncAndCalculate();
-        renderMatrix(); // 添加此行以即時反應介面 (例如: 系統注能數量)
+        renderMatrix();
     }
 
     window.purgeNodeData = function() {
@@ -685,7 +689,7 @@
         calculateAggregations();
     }
 
-    // 🕸️ 原生 Canvas 智慧動態六維雷達圖 - 全面防呆正規化版
+    // 🕸️ 原生 Canvas 智慧動態六維雷達圖
     function drawSpiderChart(stats) {
         const canvas = document.getElementById('radarCanvas');
         if(!canvas) return;
@@ -702,7 +706,6 @@
         let userCoreStats = [];
 
         Object.keys(stats).forEach(k => {
-            // 終極淨化：只留英文字母並轉大寫，消滅一切空白/特殊符號
             const cleanKey = k.replace(/[^a-zA-Z]/g, '').toUpperCase();
             if (coreStatsPool.includes(cleanKey)) {
                 const existing = userCoreStats.find(s => s.label === cleanKey);
@@ -867,7 +870,7 @@
     }
 
     // ========================================================
-    // EXCEL 匯入解析邏輯 - 強勢別名對應版
+    // EXCEL 匯入解析邏輯
     // ========================================================
     document.getElementById('excelUpload').addEventListener('change', function(e) {
         const file = e.target.files[0];
@@ -908,9 +911,8 @@
         for (let i = 0; i < rows.length; i++) {
             const rowArr = Object.values(rows[i]);
             if (!rowArr || rowArr.length === 0) continue;
-            let col0 = String(rowArr[0] || '').replace(/\s/g, ''); // 徹底移除隱形空白
+            let col0 = String(rowArr[0] || '').replace(/\s/g, ''); 
             
-            // 🛡️ 智能別名對應：將 武器B、副手、盾、盾牌 全部歸類為系統內的 "盾牌"
             if (col0 === '武器B' || col0 === '副手' || col0 === '盾') {
                 col0 = '盾牌';
             }
@@ -990,7 +992,6 @@
         reader.onload = function(evt) {
             try {
                 const importedData = JSON.parse(evt.target.result);
-                // 基本結構驗證
                 if (importedData && importedData.characters) {
                     globalAppState = importedData;
                     verifyAndFixStructure();
@@ -1003,7 +1004,7 @@
                 console.error(err);
                 alert('讀取檔案失敗，請確認檔案是否為正確的 JSON 備份檔。');
             } finally {
-                e.target.value = ''; // Reset input
+                e.target.value = ''; 
             }
         };
         reader.readAsText(file);
