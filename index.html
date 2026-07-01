@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>C.T.M 核心數值戰術終端</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#050608">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiBmaWxsPSIjMDBmMmZlIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMGEwYTBhIi8+PGNpcmNsZSBjeD0iOTYiIGN5PSI5NiIgcj0iNDAiLz48L3N2Zz4=">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --matte-black: #050608;
+            --panel-bg: #0b0f16;
+            --panel-bg-alpha: rgba(11, 15, 22, 0.85);
+            --neon-blue: #00f2fe;
+            --neon-blue-dark: #007799;
+            --neon-glow: 0 0 15px rgba(0, 242, 254, 0.4);
+            --border-color: #1e2638;
+            --text-primary: #e0e8f0;
+            --text-secondary: #627597;
+            --danger: #ff0055;
+            --danger-glow: 0 0 10px rgba(255, 0, 85, 0.5);
+            --success: #39ff14;
+            --warning: #ffcc00;
+            --track-bg: #060912;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            background-color: var(--matte-black);
+            background-image: linear-gradient(rgba(0, 242, 254, 0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 242, 254, 0.02) 1px, transparent 1px);
+            background-size: 40px 40px;
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        header {
+            background: linear-gradient(180deg, #111624 0%, #080a10 100%);
+            border-bottom: 2px solid var(--neon-blue);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--neon-glow);
+            z-index: 50;
+        }
+
+        .brand-zone { display: flex; align-items: center; gap: 15px; }
+
+        h1 {
+            font-size: 1.3rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            background: linear-gradient(90deg, #fff, var(--neon-blue));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+        
+        .btn-upload-label {
+            background: rgba(0, 242, 254, 0.1);
+            border: 1px solid var(--neon-blue);
+            color: var(--neon-blue);
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-upload-label:hover { background: rgba(0, 242, 254, 0.2); box-shadow: var(--neon-glow); }
+        
+        .btn-backup-in { border-color: var(--success); color: var(--success); background: rgba(57, 255, 20, 0.05); }
+        .btn-backup-in:hover { background: rgba(57, 255, 20, 0.15); box-shadow: 0 0 10px rgba(57, 255, 20, 0.3); }
+        .btn-backup-out { border-color: var(--warning); color: var(--warning); background: rgba(255, 204, 0, 0.05); }
+        .btn-backup-out:hover { background: rgba(255, 204, 0, 0.15); box-shadow: 0 0 10px rgba(255, 204, 0, 0.3); }
+
+        #excelUpload, #backupUpload { display: none; }
+
+        /* ============================
+           DESKTOP LAYOUT (>= 1200px)
+           ============================ */
+        @media (min-width: 1200px) {
+            body { height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+            .hud-layout { display: flex; flex: 1; overflow: hidden; padding: 20px; gap: 20px; max-width: 1600px; width: 100%; margin: 0 auto; }
+            
+            .hud-panel { 
+                background: var(--panel-bg-alpha); 
+                border: 1px solid var(--border-color); 
+                border-radius: 8px; 
+                display: flex; 
+                flex-direction: column; 
+                position: relative; 
+                box-shadow: 0 10px 30px rgba(0,0,0,0.6); 
+                backdrop-filter: blur(10px); 
+                min-height: 0; 
+            }
+            
+            .hud-panel::before { content: ''; position: absolute; top: -1px; left: -1px; width: 15px; height: 15px; border-top: 2px solid var(--neon-blue); border-left: 2px solid var(--neon-blue); pointer-events: none; z-index: 10; border-top-left-radius: 8px; }
+            .hud-panel::after { content: ''; position: absolute; bottom: -1px; right: -1px; width: 15px; height: 15px; border-bottom: 2px solid var(--neon-blue); border-right: 2px solid var(--neon-blue); pointer-events: none; z-index: 10; border-bottom-right-radius: 8px;}
+            
+            .stats-scroller, .matrix-scroller { flex: 1; overflow-y: auto; }
+            .right-panel-wrapper { flex: 1; display: flex; flex-direction: column; overflow-y: auto; overflow-x: hidden; padding-bottom: 10px;}
+        }
+
+        /* ============================
+           MOBILE LAYOUT (< 1200px)
+           ============================ */
+        @media (max-width: 1199px) {
+            html, body { height: auto; overflow-y: auto; display: block; -webkit-overflow-scrolling: touch; }
+            .hud-layout { display: flex; flex-direction: column; gap: 20px; padding: 10px; height: auto; overflow: visible; }
+            
+            .hud-panel { 
+                background: var(--panel-bg-alpha); 
+                border: 1px solid var(--border-color); 
+                border-radius: 8px; 
+                width: 100%; 
+                display: flex; 
+                flex-direction: column; 
+                height: auto; 
+                min-height: 0; 
+                position: relative; 
+            }
+            
+            .hud-panel::before { content: ''; position: absolute; top: -1px; left: -1px; width: 15px; height: 15px; border-top: 2px solid var(--neon-blue); border-left: 2px solid var(--neon-blue); pointer-events: none; z-index: 10; border-top-left-radius: 8px;}
+            .hud-panel::after { content: ''; position: absolute; bottom: -1px; right: -1px; width: 15px; height: 15px; border-bottom: 2px solid var(--neon-blue); border-right: 2px solid var(--neon-blue); pointer-events: none; z-index: 10; border-bottom-right-radius: 8px;}
+
+            .stats-scroller, .matrix-scroller, .right-panel-wrapper { height: auto; max-height: none; overflow-y: visible; padding-bottom: 20px; }
+            .matrix-nine-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; width: 100%; }
+            header { flex-direction: column; gap: 10px; padding: 15px; }
+            .header-actions { justify-content: center; }
+        }
+
+        .panel-header { background: rgba(255, 255, 255, 0.02); padding: 14px 18px; border-bottom: 1px solid var(--border-color); font-size: 0.95rem; font-weight: bold; color: var(--neon-blue); text-transform: uppercase; letter-spacing: 2px; display: flex; justify-content: space-between; align-items: center; }
+
+        .panel-left { width: 340px; flex-shrink: 0; }
+        .char-manager { padding: 18px; border-bottom: 1px solid var(--border-color); background: rgba(0, 0, 0, 0.3); }
+        .char-selector-row { display: flex; gap: 10px; margin-bottom: 15px; }
+        .char-profile-card { background: rgba(0, 242, 254, 0.04); border: 1px dashed var(--neon-blue-dark); padding: 15px; border-radius: 6px; }
+
+        .stats-scroller { padding: 15px; display: flex; flex-direction: column; gap: 12px; }
+
+        /* 🎮 遊戲進度條能力值 UI */
+        .game-stat-container { background: #090d16; border: 1px solid #162238; padding: 12px 14px; border-radius: 6px; display: flex; flex-direction: column; gap: 8px; transition: all 0.2s; }
+        .game-stat-container:hover { border-color: var(--neon-blue-dark); background: #0f1726; }
+        .stat-meta-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; font-weight: bold; }
+        .stat-label-text { color: var(--text-primary); letter-spacing: 1px; }
+        .stat-value-text { color: var(--neon-blue); text-shadow: 0 0 6px rgba(0, 242, 254, 0.7); }
+        .stat-progress-track { width: 100%; height: 6px; background: var(--track-bg); border: 1px solid #131d2e; border-radius: 3px; overflow: hidden; }
+        .stat-progress-fill { height: 100%; background: linear-gradient(90deg, var(--neon-blue-dark), var(--neon-blue)); box-shadow: 0 0 8px var(--neon-blue); width: 0%; border-radius: 3px; transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        .panel-center { flex: 1.5; }
+        .matrix-scroller { padding: 25px; display: flex; flex-direction: column; align-items: center; }
+
+        .tabs-container { display: flex; gap: 8px; max-width: 100%; overflow-x: auto; width: 100%; padding-bottom: 10px; margin-bottom: 20px; }
+        .tab-trigger { background: #0f1522; border: 1px solid #202d42; color: var(--text-secondary); padding: 10px 18px; border-radius: 4px; cursor: pointer; white-space: nowrap; font-size: 0.9rem; font-weight: 600; transition: all 0.2s; text-transform: uppercase; }
+        .tab-trigger:hover { border-color: var(--neon-blue-dark); }
+        .tab-trigger.active { background: var(--border-color); border-color: var(--neon-blue); color: #fff; box-shadow: inset 0 0 10px rgba(0, 242, 254, 0.2); }
+
+        @media (min-width: 1200px) { .matrix-nine-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; width: 100%; max-width: 650px; } }
+
+        .matrix-node { background: #090c12; border: 1px solid #161f30; border-radius: 10px; aspect-ratio: 1 / 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 15px; cursor: pointer; position: relative; transition: all 0.2s; }
+        .matrix-node:hover { border-color: var(--neon-blue); box-shadow: var(--neon-glow); background: #0f1624; transform: translateY(-2px); }
+        .matrix-node.selected { border-color: var(--neon-blue); background: rgba(0, 242, 254, 0.08); box-shadow: var(--neon-glow), inset 0 0 12px rgba(0, 242, 254, 0.2); transform: scale(1.02); }
+        .matrix-node.filled { border-color: var(--neon-blue-dark); background: rgba(0, 119, 153, 0.15); }
+        .node-index { font-size: 0.8rem; color: var(--text-secondary); position: absolute; top: 10px; left: 12px; font-weight: bold; letter-spacing: 1px; }
+        .node-name { font-size: 1rem; font-weight: 700; color: #fff; margin-top: 10px; text-align: center; word-break: break-all; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .node-star { font-size: 0.85rem; color: var(--neon-blue); margin-top: 6px; }
+
+        .panel-right { width: 380px; flex-shrink: 0; display: flex; flex-direction: column;}
+        
+        .editor-container { padding: 20px; display: flex; flex-direction: column; gap: 12px; flex-shrink: 0; border-bottom: 1px solid var(--border-color); }
+
+        /* 雷達圖區域 */
+        .radar-container { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,0.2); min-height: 250px; flex-shrink: 0; margin-top: auto;}
+        .radar-title { font-size: 0.95rem; color: var(--neon-blue); text-transform: uppercase; letter-spacing: 1px; font-weight: bold; margin-bottom: 10px; text-shadow: 0 0 5px rgba(0, 242, 254, 0.5); }
+        #radarCanvas { max-width: 100%; height: auto; filter: drop-shadow(0 0 8px rgba(0,242,254,0.3)); }
+
+        .editor-placeholder { color: var(--text-secondary); text-align: center; margin: auto 0; font-size: 0.95rem; font-style: italic; line-height: 1.6; }
+        .input-title { font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 6px; font-weight: bold; display: block; letter-spacing: 1px; }
+        .ctrl-input { background: #080b12; color: #fff; border: 1px solid #202b40; padding: 12px 14px; border-radius: 6px; font-size: 0.95rem; outline: none; width: 100%; transition: all 0.2s; }
+        .ctrl-input:focus { border-color: var(--neon-blue); box-shadow: 0 0 8px rgba(0, 242, 254, 0.3); background: #0b0f1a; }
+        .select-star { appearance: none; background: #080b12 url("data:image/svg+xml;utf8,<svg fill='%2300f2fe' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>") no-repeat right 10px center; padding-right: 32px; }
+        .affix-matrix-box { border-top: 1px solid var(--border-color); padding-top: 18px; margin-top: 5px; }
+        .affix-slot-row { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 10px; align-items: center; }
+
+        .btn-terminal { background: transparent; border: 1px solid var(--neon-blue-dark); color: var(--neon-blue); padding: 10px 16px; border-radius: 4px; font-size: 0.9rem; font-weight: bold; cursor: pointer; transition: all 0.2s; text-transform: uppercase; letter-spacing: 1px; }
+        .btn-terminal:hover { background: rgba(0, 242, 254, 0.15); box-shadow: var(--neon-glow); border-color: var(--neon-blue); }
+        .btn-danger { border-color: var(--danger); color: var(--danger); }
+        .btn-danger:hover { background: rgba(255, 0, 85, 0.15); box-shadow: var(--danger-glow); border-color: #ff3377; }
+
+        #loaderOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center; color: var(--neon-blue); font-size: 1.5rem; font-weight: bold; backdrop-filter: blur(5px); flex-direction: column; gap: 15px; }
+        .loader-spinner { width: 40px; height: 40px; border: 4px solid rgba(0, 242, 254, 0.2); border-top: 4px solid var(--neon-blue); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* 🔥 Autocomplete 智能檢索模組樣式 */
+        .ac-wrap { position: relative; width: 100%; display: flex; flex-direction: column; }
+        .ac-list { position: absolute; top: 100%; left: 0; right: 0; background: #0b0f1a; border: 1px solid var(--neon-blue); border-radius: 4px; max-height: 220px; overflow-y: auto; z-index: 999; display: none; box-shadow: 0 5px 15px rgba(0,0,0,0.8), var(--neon-glow); margin-top: 4px; }
+        .ac-item { padding: 10px 14px; font-size: 0.9rem; cursor: pointer; border-bottom: 1px solid #1e2638; color: var(--text-primary); transition: background 0.2s; display: flex; flex-direction: column; }
+        .ac-item:hover { background: rgba(0, 242, 254, 0.15); color: #fff; border-left: 2px solid var(--neon-blue); }
+        .ac-tag { font-size: 0.75rem; color: var(--neon-blue); margin-top: 4px; opacity: 0.8; letter-spacing: 1px; }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1f2c3f; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--neon-blue-dark); }
+    </style>
+</head>
+<body>
+
+<div id="loaderOverlay">
+    <div class="loader-spinner"></div>
+    <div>SYSTEM PARSING DATA...</div>
+</div>
+
+<header>
+    <div class="brand-zone">
+        <h1>數值統整終端</h1>
+    </div>
+    <div class="header-actions">
+        <button class="btn-upload-label btn-backup-out" onclick="exportBackup()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            下載備份
+        </button>
+        <label for="backupUpload" class="btn-upload-label btn-backup-in">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            上傳備份
+        </label>
+        <input type="file" id="backupUpload" accept=".json">
+        
+        <label for="excelUpload" class="btn-upload-label">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+            匯入 Excel
+        </label>
+        <input type="file" id="excelUpload" accept=".xlsx, .xls, .csv">
+    </div>
+</header>
+
+<div class="hud-layout">
+    <aside class="hud-panel panel-left">
+        <div class="panel-header">英雄檔案庫</div>
+        
+        <div class="char-manager">
+            <div class="char-selector-row">
+                <select id="charDropdown" class="ctrl-input" onchange="switchCharacter(this.value)"></select>
+                <button class="btn-terminal" onclick="createNewCharacter()">＋ 新建</button>
+            </div>
+            
+            <div class="char-profile-card">
+                <div style="margin-bottom: 12px;">
+                    <label class="input-title">編譯名稱</label>
+                    <input type="text" id="charNameInput" class="ctrl-input" placeholder="輸入角色名稱" oninput="updateCharProfile('name', this.value)">
+                </div>
+                <div>
+                    <label class="input-title">設定職業</label>
+                    <input type="text" id="charJobInput" class="ctrl-input" placeholder="輸入職業 (例如: 刺客/法師)" oninput="updateCharProfile('job', this.value)">
+                </div>
+            </div>
+        </div>
+
+        <div class="panel-header" style="border-top: 1px solid var(--border-color);">全能力補正面板</div>
+        <div class="stats-scroller" id="statsSummaryOutput"></div>
+    </aside>
+
+    <section class="hud-panel panel-center">
+        <div class="panel-header">
+            <span>裝備插槽矩陣</span>
+            <button class="btn-terminal btn-danger" style="padding: 6px 12px; font-size:0.8rem;" onclick="purgeCurrentCharConfig()">重置裝備</button>
+        </div>
+        
+        <div class="matrix-scroller">
+            <div class="tabs-container" id="equipTabsHeaders"></div>
+            <div class="matrix-nine-grid" id="matrixNineGridContainer"></div>
+        </div>
+    </section>
+
+    <aside class="hud-panel panel-right">
+        <div class="panel-header" id="editorPanelTitle">改裝與潛能終端</div>
+        <div class="right-panel-wrapper">
+            <div class="editor-container" id="editorPanelContent" style="scroll-margin-top: 20px;">
+                <div class="editor-placeholder" style="margin-top:40px; margin-bottom:40px;">請選取中央的矩陣方格<br>解鎖改裝配置</div>
+            </div>
+            <!-- 雷達圖區域 -->
+            <div class="radar-container">
+                <div class="radar-title">核心六維潛能圖</div>
+                <canvas id="radarCanvas" width="300" height="260"></canvas>
+            </div>
+        </div>
+    </aside>
+</div>
+
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js').then(reg => {
+                console.log('PWA ServiceWorker registered');
+            });
+        });
+    }
+
+    // 🌟 動態構建全詞墜與標籤關聯庫 (自動映射)
+    const affixDictionary = [
+        { v: "STR", t: "力量" }, { v: "AGI", t: "敏捷" }, { v: "VIT", t: "體質" }, { v: "INT", t: "智力" }, { v: "DEX", t: "靈巧" }, { v: "LUK", t: "幸運" },
+        { v: "POW", t: "力量" }, { v: "STA", t: "耐力" }, { v: "WIS", t: "智慧" }, { v: "SPL", t: "SP 魔力 精神" }, { v: "CON", t: "體格" }, { v: "CRT", t: "暴擊" },
+        { v: "Hit", t: "命中" }, { v: "Flee", t: "迴避 閃避" }, { v: "Critical", t: "暴擊 爆擊" },
+        { v: "MaxHP", t: "血量 生命 HP" }, { v: "MaxSP", t: "魔力 MP SP" },
+        { v: "Atk", t: "物理攻擊 攻擊力" }, { v: "Matk", t: "魔法攻擊 魔攻" },
+        { v: "變動詠唱", t: "詠唱 施法 變詠" }, { v: "固定詠唱（取最高）", t: "詠唱 施法 固詠" }, { v: "變動詠唱（毫秒）", t: "詠唱 施法 變詠 ms" }, { v: "固定詠唱（毫秒）", t: "詠唱 施法 固詠 ms" },
+        { v: "物理護甲值", t: "防禦 護甲 物防" }, { v: "魔法護甲值", t: "防禦 護甲 魔防" },
+        { v: "Res", t: "物理抗性" }, { v: "Mres", t: "魔法抗性" }, { v: "H.Plus", t: "治療 治癒" },
+        { v: "技能後延遲", t: "延遲 減延" }, { v: "詠唱不會中斷", t: "詠唱 不斷" }, 
+        { v: "物理擊中時，恢復生命", t: "吸血 恢復" }, { v: "魔法擊中時，恢復生命", t: "吸血 恢復" }, 
+        { v: "近距離物理傷害", t: "近戰 物理" }, { v: "遠距離物理傷害", t: "遠程 物理" }, 
+        { v: "暴擊傷害", t: "暴傷 爆傷" }, { v: "全屬性物理傷害", t: "物理 全屬" }, { v: "全屬性魔法傷害", t: "魔法 全屬" }, 
+        { v: "物理命中傷害", t: "物理 必中" }, { v: "魔法傷害提升", t: "魔法 增傷" }, { v: "P.Atk", t: "物理 增傷" }, { v: "S.Matk", t: "魔法 增傷" }, { v: "C.Rate", t: "暴擊 爆擊率" }
+    ];
+
+    const elements = ["無", "水", "地", "風", "火", "毒", "聖", "念", "暗", "不死"];
+    elements.forEach(e => {
+        affixDictionary.push({ v: `攻擊${e}屬性魔物時，物理傷害`, t: `屬性 增傷 物理 ${e}屬` });
+        affixDictionary.push({ v: `攻擊${e}屬性魔物時，魔法傷害`, t: `屬性 增傷 魔法 ${e}屬` });
+        affixDictionary.push({ v: `${e}屬性魔法傷害`, t: `屬性 魔法 ${e}屬` });
+        affixDictionary.push({ v: `${e}屬性物理傷害`, t: `屬性 物理 ${e}屬` });
+        affixDictionary.push({ v: `${e}屬性抗性`, t: `屬性 抗性 減傷 ${e}屬` });
+    });
+
+    const races = ["無形", "不死", "動物", "植物", "昆蟲", "魚貝", "惡魔", "人形", "天使", "龍類"];
+    races.forEach(r => {
+        affixDictionary.push({ v: `攻擊${r}種族時，物理傷害`, t: `種族 增傷 物理 ${r}` });
+        affixDictionary.push({ v: `攻擊${r}種族時，魔法傷害`, t: `種族 增傷 魔法 ${r}` });
+        affixDictionary.push({ v: `${r}種族抗性`, t: `種族 抗性 減傷 ${r}` });
+    });
+
+    const sizes = ["小", "中", "大"];
+    sizes.forEach(s => {
+        affixDictionary.push({ v: `攻擊${s}體型魔物時，物理傷害`, t: `體型 增傷 物理 ${s}型` });
+        affixDictionary.push({ v: `攻擊${s}體型魔物時，魔法傷害`, t: `體型 增傷 魔法 ${s}型` });
+        affixDictionary.push({ v: `${s}體型抗性`, t: `體型 抗性 減傷 ${s}型` });
+    });
+
+    const classes = ["一般", "首領"];
+    classes.forEach(c => {
+        affixDictionary.push({ v: `攻擊${c}階級時，物理傷害`, t: `階級 增傷 王 物理 ${c}` });
+        affixDictionary.push({ v: `攻擊${c}階級時，魔法傷害`, t: `階級 增傷 王 魔法 ${c}` });
+        affixDictionary.push({ v: `${c}類型階級抗性`, t: `階級 抗性 減傷 王 ${c}` });
+    });
+
+    const abnormalStatuses = ["中毒", "沉默", "睡眠", "暈眩", "出血", "黑暗", "冰凍", "石化", "著火", "冷凍", "混亂", "幻覺", "詛咒", "劇毒", "沉睡", "恐怖", "火災", "急流", "急凍", "晶化", "猛毒"];
+    abnormalStatuses.forEach(a => {
+        affixDictionary.push({ v: `對${a}目標物理傷害時機率傷害`, t: `異常 狀態 物理 機率 ${a}` });
+        affixDictionary.push({ v: `對${a}目標魔法傷害時機率傷害`, t: `異常 狀態 魔法 機率 ${a}` });
+    });
+
+    // 🌟 卡片資料庫 (提取自您的檔案 2)
+    const allCards = ["魔鍋蛋", "瘋狂螳螂", "綠棉蟲", "禿鷹", "沙漠幼狼", "蒼蠅", "魔菇", "摩卡", "燃燒夢魘", "深海海神", "深海劍魚", "亞拉", "食人魚", "樹精", "堅硬石巨人"];
+    const cardDictionary = allCards.map(c => ({ v: c, t: "卡片" }));
+
+    const structuralEquips = [
+        {"name": "武器A", "slots": ["第一洞", "第二洞", "第三洞", "第四洞", "第五洞", "第六洞", "第七洞", "第八洞", "第九洞"]},
+        {"name": "盾牌", "slots": ["第一洞", "第二洞", "第三洞", "第四洞", "第五洞", "第六洞", "第七洞", "第八洞", "第九洞"]},
+        {"name": "頭上", "slots": ["第一洞", "第二洞", "第三洞", "第四洞", "第五洞", "第六洞", "第七洞", "第八洞", "第九洞"]},
+        {"name": "頭中", "slots": ["第一洞", "第二洞", "第三洞", "第四洞", "第五洞", "第六洞", "第七洞", "第八洞", "第九洞"]},
+        {"name": "頭下", "slots": ["第一洞", "第二洞", "第三洞", "第四洞", "第五洞", "第六洞", "第七洞", "第八洞", "第九洞"]},
+        {"name": "衣服", "slots": ["第一洞", "第二洞", "第三洞", "第四洞", "第五洞", "第六洞", "第七洞", "第八洞", "第九洞"]},
+        {"name": "披風", "slots": ["第一洞", "第二洞", "第三洞", "第四洞", "第五洞", "第六洞", "第七洞", "第八洞", "第九洞"]},
+        {"name": "鞋子", "slots": ["第一洞", "第二洞", "第三洞", "第四洞", "第五洞", "第六洞", "第七洞", "第八洞", "第九洞"]},
+        {"name": "飾品左", "slots": ["第一洞", "第二洞", "第三洞", "第四洞", "第五洞", "第六洞", "第七洞", "第八洞", "第九洞"]},
+        {"name": "飾品右", "slots": ["第一洞", "第二洞", "第三洞", "第四洞", "第五洞", "第六洞", "第七洞", "第八洞", "第九洞"]}
+    ];
+
+    let globalAppState = JSON.parse(localStorage.getItem('moonSoul_MultiCharApp_v19')) || {
+        activeCharId: 'char_1',
+        characters: {
+            'char_1': { name: '預設英雄', job: '初心者', config: {} }
+        }
+    };
+
+    let activeEquipName = structuralEquips[0] ? structuralEquips[0].name : '';
+    let activeSlotIndex = null;
+
+    function verifyAndFixStructure() {
+        const charId = globalAppState.activeCharId;
+        if (!globalAppState.characters[charId]) {
+            globalAppState.activeCharId = Object.keys(globalAppState.characters)[0] || 'char_1';
+        }
+        const curChar = globalAppState.characters[globalAppState.activeCharId];
+        if (!curChar.config) curChar.config = {};
+
+        structuralEquips.forEach(eq => {
+            if (!curChar.config[eq.name]) {
+                curChar.config[eq.name] = [];
+            }
+            eq.slots.forEach((slot, sIdx) => {
+                if (!curChar.config[eq.name][sIdx]) {
+                    curChar.config[eq.name][sIdx] = {
+                        slotLabel: slot,
+                        card: '',
+                        star: '',
+                        affixes: [{name:'',val:''},{name:'',val:''},{name:'',val:''},{name:'',val:''},{name:'',val:''}]
+                    };
+                }
+            });
+        });
+    }
+
+    function renderCharDropdown() {
+        const dropdown = document.getElementById('charDropdown');
+        dropdown.innerHTML = '';
+        Object.keys(globalAppState.characters).forEach(id => {
+            const char = globalAppState.characters[id];
+            const opt = document.createElement('option');
+            opt.value = id;
+            opt.textContent = `${char.name} [${char.job}]`;
+            if (id === globalAppState.activeCharId) opt.selected = true;
+            dropdown.appendChild(opt);
+        });
+
+        const curChar = globalAppState.characters[globalAppState.activeCharId];
+        document.getElementById('charNameInput').value = curChar.name || '';
+        document.getElementById('charJobInput').value = curChar.job || '';
+    }
+
+    window.createNewCharacter = function(name = '新英雄', job = '未知職業', autoSwitch = true) {
+        const newId = 'char_' + Date.now() + Math.floor(Math.random() * 1000);
+        globalAppState.characters[newId] = { name: name, job: job, config: {} };
+        if (autoSwitch) {
+            globalAppState.activeCharId = newId;
+            activeSlotIndex = null;
+        }
+        verifyAndFixStructure();
+        saveAndRefreshAll();
+        return newId;
+    }
+
+    window.switchCharacter = function(id) {
+        globalAppState.activeCharId = id;
+        activeSlotIndex = null;
+        verifyAndFixStructure();
+        saveAndRefreshAll();
+    }
+
+    window.updateCharProfile = function(key, val) {
+        globalAppState.characters[globalAppState.activeCharId][key] = val;
+        localStorage.setItem('moonSoul_MultiCharApp_v19', JSON.stringify(globalAppState));
+        const dropdown = document.getElementById('charDropdown');
+        const opt = dropdown.querySelector(`option[value="${globalAppState.activeCharId}"]`);
+        if (opt) {
+            const char = globalAppState.characters[globalAppState.activeCharId];
+            opt.textContent = `${char.name} [${char.job}]`;
+        }
+    }
+
+    function renderTabs() {
+        const container = document.getElementById('equipTabsHeaders');
+        container.innerHTML = structuralEquips.map(eq => `
+            <button class="tab-trigger ${eq.name === activeEquipName ? 'active' : ''}" onclick="switchEquipTab('${eq.name}')">
+                ${eq.name}
+            </button>
+        `).join('');
+    }
+
+    window.switchEquipTab = function(name) {
+        activeEquipName = name;
+        activeSlotIndex = null;
+        renderTabs();
+        renderMatrix();
+        renderEditor();
+    }
+
+    function renderMatrix() {
+        const container = document.getElementById('matrixNineGridContainer');
+        container.innerHTML = '';
+
+        const curChar = globalAppState.characters[globalAppState.activeCharId];
+        const slots = curChar.config[activeEquipName] || [];
+
+        slots.forEach((slotData, idx) => {
+            const node = document.createElement('div');
+            const isFilled = slotData.card || slotData.affixes.some(a => a.name && a.val);
+            const isSelected = (idx === activeSlotIndex);
+
+            node.className = `matrix-node ${isFilled ? 'filled' : ''} ${isSelected ? 'selected' : ''}`;
+            node.onclick = () => selectMatrixNode(idx);
+
+            let inner = `<div class="node-index">${slotData.slotLabel}</div>`;
+            if (slotData.card) {
+                inner += `
+                    <div class="node-name">${slotData.card}</div>
+                    <div class="node-star">${slotData.star ? slotData.star + ' ★' : ''}</div>
+                `;
+            } else {
+                const activeCount = slotData.affixes.filter(a => a.name && a.val).length;
+                if (activeCount > 0) {
+                    inner += `<div class="node-name" style="color:var(--neon-blue); font-size:0.9rem;">系統注能 (${activeCount})</div>`;
+                } else {
+                    inner += `<div style="color:#2a364f; font-size:0.85rem; font-weight:bold; letter-spacing:1px;">EMPTY</div>`;
+                }
+            }
+
+            node.innerHTML = inner;
+            container.appendChild(node);
+        });
+    }
+
+    function selectMatrixNode(idx) {
+        activeSlotIndex = idx;
+        renderMatrix();
+        renderEditor();
+        if (window.innerWidth <= 1199) {
+            setTimeout(() => {
+                document.getElementById('editorPanelContent').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+    }
+
+    // 🚀 核心自建智慧下拉菜單邏輯
+    window.openAC = function(inputEl, dict, type, affixIdx = null) {
+        // 先關閉其他展開的選單
+        document.querySelectorAll('.ac-list').forEach(el => el.style.display = 'none');
+        
+        let wrap = inputEl.closest('.ac-wrap');
+        let list = wrap.querySelector('.ac-list');
+        
+        function renderList(query) {
+            let q = query.toLowerCase().trim();
+            let matches = dict;
+            if (q) {
+                let qParts = q.split(' ');
+                matches = dict.filter(d => {
+                    let searchStr = (d.v + " " + (d.t || "")).toLowerCase();
+                    return qParts.every(part => searchStr.includes(part)); // 支援多關鍵字搜尋 (例如: 異常 物理)
+                });
+            }
+            matches = matches.slice(0, 80); // 效能防護
+
+            if (matches.length > 0) {
+                list.innerHTML = matches.map(m => `
+                    <div class="ac-item" onmousedown="selectAC('${type}', '${m.v}', ${affixIdx})">
+                        <div>${m.v}</div>
+                        ${m.t ? `<div class="ac-tag">${m.t}</div>` : ''}
+                    </div>
+                `).join('');
+                list.style.display = 'block';
+            } else {
+                list.style.display = 'none';
+            }
+        }
+        
+        renderList(inputEl.value);
+        
+        inputEl.oninput = function() {
+            if (type === 'card') {
+                updateHeaderData('card', this.value);
+            } else {
+                updateAffixData(affixIdx, 'name', this.value);
+            }
+            renderList(this.value);
+        };
+    }
+
+    window.selectAC = function(type, val, affixIdx) {
+        if (type === 'card') {
+            updateHeaderData('card', val);
+        } else {
+            updateAffixData(affixIdx, 'name', val);
+        }
+        // 強制重繪 Editor 以關閉並更新欄位
+        renderEditor();
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.ac-wrap')) {
+            document.querySelectorAll('.ac-list').forEach(el => el.style.display = 'none');
+        }
+    });
+
+    function renderEditor() {
+        const container = document.getElementById('editorPanelContent');
+
+        if (activeSlotIndex === null) {
+            container.innerHTML = `<div class="editor-placeholder" style="margin-top:40px; margin-bottom:40px;">請選取中央的矩陣方格<br>解鎖改裝配置</div>`;
+            return;
+        }
+
+        const curChar = globalAppState.characters[globalAppState.activeCharId];
+        const slotData = curChar.config[activeEquipName][activeSlotIndex];
+
+        let starOpts = '<option value="">選擇星級</option>';
+        for (let i = 1; i <= 40; i++) {
+            starOpts += `<option value="${i}" ${slotData.star == i ? 'selected' : ''}>${i} 星</option>`;
+        }
+
+        let affixRows = '';
+        for (let i = 0; i < 5; i++) {
+            const af = slotData.affixes[i] || {name:'', val:''};
+            // 替換為客製化 AC 包裝
+            affixRows += `
+                <div class="affix-slot-row">
+                    <div class="ac-wrap" style="width:100%;">
+                        <input type="text" class="ctrl-input" placeholder="欄位 ${i+1} 詞墜" value="${af.name || ''}" onfocus="openAC(this, affixDictionary, 'affix', ${i})" autocomplete="off" style="width:100%;">
+                        <div class="ac-list"></div>
+                    </div>
+                    <input type="number" class="ctrl-input" placeholder="數值" min="1" max="20000" value="${af.val || ''}" oninput="updateAffixData(${i}, 'val', this.value)">
+                </div>
+            `;
+        }
+
+        container.innerHTML = `
+            <div style="font-size:0.95rem; font-weight:bold; color:var(--neon-blue); border-bottom:1px solid var(--border-color); padding-bottom:8px; margin-bottom:8px;">
+                ${activeEquipName} - ${slotData.slotLabel}
+            </div>
+            <div>
+                <label class="input-title">卡片信別 & 核心</label>
+                <div style="display:flex; gap:10px;">
+                    <div class="ac-wrap" style="flex:1;">
+                        <input type="text" class="ctrl-input" placeholder="鍵入卡片名稱..." value="${slotData.card || ''}" onfocus="openAC(this, cardDictionary, 'card')" autocomplete="off" style="width:100%;">
+                        <div class="ac-list"></div>
+                    </div>
+                    <select class="ctrl-input select-star" style="flex:0.6; min-width:100px;" onchange="updateHeaderData('star', this.value)">
+                        ${starOpts}
+                    </select>
+                </div>
+            </div>
+
+            <div class="affix-matrix-box">
+                <label class="input-title" style="margin-bottom:12px;">核心屬性注能 (1-5欄 / 範圍1-20000)</label>
+                ${affixRows}
+            </div>
+
+            <button class="btn-terminal btn-danger" style="margin-top:auto;" onclick="purgeNodeData()">閹割/清空此孔洞</button>
+        `;
+    }
+
+    window.updateHeaderData = function(key, val) {
+        const curChar = globalAppState.characters[globalAppState.activeCharId];
+        curChar.config[activeEquipName][activeSlotIndex][key] = val;
+        syncAndCalculate();
+        renderMatrix();
+    }
+
+    window.updateAffixData = function(afIdx, key, val) {
+        const curChar = globalAppState.characters[globalAppState.activeCharId];
+        curChar.config[activeEquipName][activeSlotIndex].affixes[afIdx][key] = val;
+        syncAndCalculate();
+        renderMatrix(); // 添加此行以即時反應介面 (例如: 系統注能數量)
+    }
+
+    window.purgeNodeData = function() {
+        const curChar = globalAppState.characters[globalAppState.activeCharId];
+        curChar.config[activeEquipName][activeSlotIndex] = {
+            slotLabel: curChar.config[activeEquipName][activeSlotIndex].slotLabel,
+            card: '',
+            star: '',
+            affixes: [{name:'',val:''},{name:'',val:''},{name:'',val:''},{name:'',val:''},{name:'',val:''}]
+        };
+        syncAndCalculate();
+        renderMatrix();
+        renderEditor();
+    }
+
+    window.purgeCurrentCharConfig = function() {
+        if(confirm('警告：即將抹除當前英雄的所有裝備數據！')) {
+            const curChar = globalAppState.characters[globalAppState.activeCharId];
+            curChar.config = {};
+            verifyAndFixStructure();
+            activeSlotIndex = null;
+            syncAndCalculate();
+            renderMatrix();
+            renderEditor();
+        }
+    }
+
+    function syncAndCalculate() {
+        localStorage.setItem('moonSoul_MultiCharApp_v19', JSON.stringify(globalAppState));
+        calculateAggregations();
+    }
+
+    // 🕸️ 原生 Canvas 智慧動態六維雷達圖 - 全面防呆正規化版
+    function drawSpiderChart(stats) {
+        const canvas = document.getElementById('radarCanvas');
+        if(!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width;
+        const H = canvas.height;
+        const centerX = W / 2;
+        const centerY = H / 2 + 10;
+        const radius = 80; 
+
+        ctx.clearRect(0, 0, W, H);
+
+        const coreStatsPool = ['STR', 'AGI', 'VIT', 'INT', 'DEX', 'LUK', 'POW', 'STA', 'WIS', 'SPL', 'CON', 'CRT'];
+        let userCoreStats = [];
+
+        Object.keys(stats).forEach(k => {
+            // 終極淨化：只留英文字母並轉大寫，消滅一切空白/特殊符號
+            const cleanKey = k.replace(/[^a-zA-Z]/g, '').toUpperCase();
+            if (coreStatsPool.includes(cleanKey)) {
+                const existing = userCoreStats.find(s => s.label === cleanKey);
+                if (existing) {
+                    existing.value += stats[k];
+                } else {
+                    userCoreStats.push({ label: cleanKey, value: stats[k] });
+                }
+            }
+        });
+
+        userCoreStats.sort((a, b) => b.value - a.value);
+        let displayStats = userCoreStats.slice(0, 6);
+
+        if (displayStats.length < 6) {
+            const usedLabels = displayStats.map(s => s.label);
+            for (let i = 0; i < coreStatsPool.length && displayStats.length < 6; i++) {
+                if (!usedLabels.includes(coreStatsPool[i])) {
+                    displayStats.push({ label: coreStatsPool[i], value: 0 });
+                    usedLabels.push(coreStatsPool[i]);
+                }
+            }
+        }
+
+        displayStats.sort((a, b) => coreStatsPool.indexOf(a.label) - coreStatsPool.indexOf(b.label));
+
+        const labels = displayStats.map(s => s.label);
+        const values = displayStats.map(s => s.value);
+
+        let maxValue = Math.max(...values, 10000) * 1.1; 
+
+        const levels = 4;
+        ctx.strokeStyle = 'rgba(0, 242, 254, 0.15)';
+        ctx.lineWidth = 1;
+        for (let j = 1; j <= levels; j++) {
+            let r = radius * (j / levels);
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                let angle = (i * Math.PI / 3) - Math.PI / 2;
+                let x = centerX + r * Math.cos(angle);
+                let y = centerY + r * Math.sin(angle);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        ctx.font = 'bold 13px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        for (let i = 0; i < 6; i++) {
+            let angle = (i * Math.PI / 3) - Math.PI / 2;
+            let x = centerX + radius * Math.cos(angle);
+            let y = centerY + radius * Math.sin(angle);
+            
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.lineTo(x, y);
+            ctx.stroke();
+
+            let lx = centerX + (radius + 22) * Math.cos(angle);
+            let ly = centerY + (radius + 15) * Math.sin(angle);
+            
+            if (values[i] > 0) {
+                ctx.fillStyle = '#00f2fe';
+            } else {
+                ctx.fillStyle = '#627597';
+            }
+            ctx.fillText(labels[i], lx, ly);
+        }
+
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            let angle = (i * Math.PI / 3) - Math.PI / 2;
+            let r = radius * (values[i] / maxValue);
+            let x = centerX + r * Math.cos(angle);
+            let y = centerY + r * Math.sin(angle);
+            
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        
+        ctx.fillStyle = 'rgba(0, 242, 254, 0.25)';
+        ctx.fill();
+        ctx.strokeStyle = '#00f2fe';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        for (let i = 0; i < 6; i++) {
+            let angle = (i * Math.PI / 3) - Math.PI / 2;
+            let r = radius * (values[i] / maxValue);
+            let x = centerX + r * Math.cos(angle);
+            let y = centerY + r * Math.sin(angle);
+            
+            ctx.beginPath();
+            ctx.arc(x, y, 4, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+            ctx.strokeStyle = '#00f2fe';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+        }
+    }
+
+    function calculateAggregations() {
+        const aggregates = {};
+        const curChar = globalAppState.characters[globalAppState.activeCharId];
+        const MAX_STAT_LIMIT = 999999;
+        
+        if (curChar && curChar.config) {
+            Object.keys(curChar.config).forEach(eqName => {
+                curChar.config[eqName].forEach(slot => {
+                    if (slot.affixes) {
+                        slot.affixes.forEach(af => {
+                            if (af.name && af.val && !isNaN(af.val)) {
+                                const k = af.name.trim();
+                                aggregates[k] = (aggregates[k] || 0) + Number(af.val);
+                            }
+                        });
+                    }
+                });
+            });
+        }
+
+        drawSpiderChart(aggregates);
+
+        const container = document.getElementById('statsSummaryOutput');
+        const sorted = Object.keys(aggregates).sort();
+
+        if (sorted.length === 0) {
+            container.innerHTML = `<div style="color:var(--text-secondary); text-align:center; font-size:0.9rem; font-style:italic; padding-top:30px;">戰術核心未釋放屬性</div>`;
+            return;
+        }
+
+        container.innerHTML = sorted.map(k => {
+            const currentVal = aggregates[k];
+            const fillPercentage = Math.min((currentVal / MAX_STAT_LIMIT) * 100, 100);
+            return `
+                <div class="game-stat-container">
+                    <div class="stat-meta-row">
+                        <span class="stat-label-text">${k}</span>
+                        <span class="stat-value-text">+${currentVal.toLocaleString()}</span>
+                    </div>
+                    <div class="stat-progress-track">
+                        <div class="stat-progress-fill" style="width: ${fillPercentage}%"></div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function saveAndRefreshAll() {
+        localStorage.setItem('moonSoul_MultiCharApp_v19', JSON.stringify(globalAppState));
+        renderCharDropdown();
+        renderTabs();
+        renderMatrix();
+        renderEditor();
+        calculateAggregations();
+    }
+
+    // ========================================================
+    // EXCEL 匯入解析邏輯 - 強勢別名對應版
+    // ========================================================
+    document.getElementById('excelUpload').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const loader = document.getElementById('loaderOverlay');
+        loader.style.display = 'flex';
+
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            try {
+                const data = new Uint8Array(evt.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                let sheetName = workbook.SheetNames.find(n => n.includes('裝備')) || workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const rawJson = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: ""});
+                parseExcelToNewCharacter(rawJson, file.name);
+            } catch(error) {
+                console.error(error);
+                alert('檔案解析失敗，請確認格式是否異常！');
+            } finally {
+                loader.style.display = 'none';
+                e.target.value = '';
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    function parseExcelToNewCharacter(rows, filename) {
+        const charName = filename.replace('.xlsx', '').replace('.csv', '').substring(0, 10);
+        const newCharId = createNewCharacter(charName + ' (解析)', '繼承者', true);
+        const config = globalAppState.characters[newCharId].config;
+
+        let currentEquip = null;
+        let slotCounter = 0;
+        let colMap = { card: -1, star: -1, affixes: [] };
+
+        for (let i = 0; i < rows.length; i++) {
+            const rowArr = Object.values(rows[i]);
+            if (!rowArr || rowArr.length === 0) continue;
+            let col0 = String(rowArr[0] || '').replace(/\s/g, ''); // 徹底移除隱形空白
+            
+            // 🛡️ 智能別名對應：將 武器B、副手、盾、盾牌 全部歸類為系統內的 "盾牌"
+            if (col0 === '武器B' || col0 === '副手' || col0 === '盾') {
+                col0 = '盾牌';
+            }
+
+            const isValidEquip = structuralEquips.find(e => e.name === col0);
+            if (isValidEquip) {
+                currentEquip = col0;
+                slotCounter = 0;
+                colMap = { card: -1, star: -1, affixes: [] };
+                for (let c = 0; c < rowArr.length; c++) {
+                    const headerVal = String(rowArr[c] || '').replace(/\s/g, '');
+                    if (headerVal.includes('卡片')) colMap.card = c;
+                    else if (headerVal.includes('星級') || headerVal.includes('星數')) colMap.star = c;
+                    else if (headerVal.includes('詞墜') || headerVal.includes('詞綴')) {
+                        colMap.affixes.push({ nameIdx: c, valIdx: c + 1 });
+                    }
+                }
+                continue;
+            }
+
+            if (col0 && (col0.includes('洞') || !isNaN(col0.replace(/[^0-9]/g, ''))) && currentEquip) {
+                if (config[currentEquip] && config[currentEquip][slotCounter]) {
+                    const targetSlot = config[currentEquip][slotCounter];
+                    if (colMap.card !== -1) {
+                        const cardName = String(rowArr[colMap.card] || '').trim();
+                        if (cardName && !cardName.includes('卡片')) targetSlot.card = cardName;
+                    }
+                    if (colMap.star !== -1) {
+                        const starVal = String(rowArr[colMap.star] || '').replace(/[^0-9]/g, '');
+                        if (starVal) targetSlot.star = starVal;
+                    }
+                    colMap.affixes.forEach((affixMap, aIdx) => {
+                        if (aIdx < 5) {
+                            const afName = String(rowArr[affixMap.nameIdx] || '').trim();
+                            const afVal = String(rowArr[affixMap.valIdx] || '').replace(/[^0-9.-]/g, '');
+                            if (afName && afVal && !isNaN(afVal)) {
+                                targetSlot.affixes[aIdx].name = afName;
+                                targetSlot.affixes[aIdx].val = afVal;
+                            }
+                        }
+                    });
+                }
+                slotCounter++;
+            }
+        }
+        saveAndRefreshAll();
+        alert('檔案解譯完成！已為您創建新配置。');
+    }
+
+    // ========================================================
+    // 💾 備份系統邏輯 (匯出/匯入 JSON)
+    // ========================================================
+    window.exportBackup = function() {
+        try {
+            const dataStr = JSON.stringify(globalAppState, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            const date = new Date().toISOString().slice(0,10).replace(/-/g,"");
+            a.href = url;
+            a.download = `CTM_DataBackup_${date}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch(e) {
+            console.error(e);
+            alert("匯出備份失敗！");
+        }
+    };
+
+    document.getElementById('backupUpload').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            try {
+                const importedData = JSON.parse(evt.target.result);
+                // 基本結構驗證
+                if (importedData && importedData.characters) {
+                    globalAppState = importedData;
+                    verifyAndFixStructure();
+                    saveAndRefreshAll();
+                    alert('備份檔案匯入成功！所有資料已還原。');
+                } else {
+                    alert('無效的備份檔案：缺少核心資料結構。');
+                }
+            } catch(err) {
+                console.error(err);
+                alert('讀取檔案失敗，請確認檔案是否為正確的 JSON 備份檔。');
+            } finally {
+                e.target.value = ''; // Reset input
+            }
+        };
+        reader.readAsText(file);
+    });
+
+    verifyAndFixStructure();
+    saveAndRefreshAll();
+</script>
+</body>
+</html>
